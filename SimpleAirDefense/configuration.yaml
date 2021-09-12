@@ -1,0 +1,39 @@
+﻿---
+# The following setup is for the logging system. For information on how to change this
+# see 
+Serilog:
+  Using:
+  MinimumLevel: 
+    Default: Information
+  Override: 
+    Microsoft: Warning
+    System: Warning
+  Enrich:
+    - FromLogContext
+    - WithProcessId
+    - WithThreadId
+  WriteTo:
+    -
+      Name: File
+      Args:
+        path: logs/simpleAirDefense.log
+GameServers:
+  - 
+    # Replace the following example fields with those used by your server and database
+    Name: RurouniJones Bestest Server
+    # Used in discord commands so keep this unique across your gameservers
+    ShortName: RBS
+    Rpc:
+      Host: rbs.example.com
+      # This is the default port
+      Port: 50051
+  # You can specify multiple game servers and have one SimpleAirDefense instance handle all of them
+  - 
+    # Replace the following example fields with those used by your server and database
+    Name: RurouniJones Worstest Server
+    # Used in discord commands so keep this unique across your gameservers
+    ShortName: RWS
+    Rpc:
+      Host: rws.example.com
+      # This is the default port
+      Port: 50051
