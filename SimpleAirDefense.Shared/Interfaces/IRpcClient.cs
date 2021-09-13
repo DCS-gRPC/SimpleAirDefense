@@ -25,5 +25,9 @@ namespace RurouniJones.SimpleAirDefense.Shared.Interfaces
         public int Port { get; set; }
 
         Task ExecuteAsync(CancellationToken stoppingToken);
+
+        Task<UnitDescriptor> GetUnitDescriptorAsync(string name, string type);
+
+        Task SetAlarmStateAsync(string unitName, string groupName, int alarmState);
     }
 }
