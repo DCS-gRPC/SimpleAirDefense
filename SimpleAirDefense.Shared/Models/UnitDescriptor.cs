@@ -4,6 +4,6 @@ namespace RurouniJones.SimpleAirDefense.Shared.Models
 {
     public class UnitDescriptor
     {
-        public List<string> Attributes { get; init; }
+        public List<string> Attributes { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,19 +9,42 @@ using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using RurouniJones.SimpleAirDefense.Shared.Models;
+using YamlDotNet.Serialization;
 
 namespace RurouniJones.SimpleAirDefense.Grpc
 {
     public class RpcClient : IRpcClient
     {
-        private static ConcurrentDictionary<string, UnitDescriptor> _descriptorCache = new();
-
+        private static readonly ConcurrentDictionary<string, UnitDescriptor> DescriptorCache = new();
+        private const string DescriptorCacheDirectory = "Cache/Descriptors/";
+        
         public ConcurrentQueue<Shared.Models.Unit> UpdateQueue { get; set; }
 
         public string HostName { get; set; }
         public int Port { get; set; }
 
         private readonly ILogger<RpcClient> _logger;
+
+        private void PopulateDescriptorCache()
+        {
+            try
+            {
+                Directory.CreateDirectory(DescriptorCacheDirectory);
+
+                var deserializer = new DeserializerBuilder()
+                    .Build();
+
+                foreach (var file in Directory.EnumerateFiles(DescriptorCacheDirectory, "*.yaml"))
+                {
+                    DescriptorCache[Path.GetFileNameWithoutExtension(file)] =
+                        deserializer.Deserialize<UnitDescriptor>(File.ReadAllText(file));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Error building descriptor cache");
+            }
+        }
 
         public RpcClient(ILogger<RpcClient> logger)
         {
@@ -100,17 +123,17 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 
         public async Task<UnitDescriptor> GetUnitDescriptorAsync(string name, string type)
         {
-            // TODO: Cache Descriptors
-            // Descriptors do not change. Therefore we should cache the results of this call
-            // on the typeName provided in the descriptor. If one exists then we use that. If
-            // one doesn't then we get the descriptor for this named unit and then cache the
-            // response based on the TypeName
+            if (DescriptorCache.IsEmpty)
+            {
+                PopulateDescriptorCache();
+            }
+
             _logger.LogInformation("{name} ({type}) Retrieving Descriptor", name, type);
 
-            if (_descriptorCache.ContainsKey(type))
+            if (DescriptorCache.ContainsKey(type))
             {
                 _logger.LogInformation("{name} ({type}) Descriptor Cache hit", name, type);
-                return _descriptorCache[type];
+                return DescriptorCache[type];
             }
             _logger.LogInformation("{name} ({type}) Descriptor Cache miss", name, type);
 
@@ -131,7 +154,12 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                     Attributes = descriptor.Attributes.ToList()
                 };
 
-                _descriptorCache[type] = unitDescriptor;
+                var serializer = new SerializerBuilder().Build();
+                var yaml = serializer.Serialize(unitDescriptor);
+
+                await File.WriteAllTextAsync($"{DescriptorCacheDirectory}/{type}.yaml", yaml);
+
+                DescriptorCache[type] = unitDescriptor;
                 return unitDescriptor;
             }
             catch (Exception ex)
