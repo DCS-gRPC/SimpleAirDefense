@@ -131,8 +131,6 @@ namespace RurouniJones.SimpleAirDefense.Core
             _logger.LogInformation("Airspace monitoring started");
             while (!defenderToken.IsCancellationRequested)
             {
-                await Task.Delay(10000, defenderToken);
-
                 try
                 {
                     _logger.LogInformation("Entering Monitoring Loop");
@@ -212,6 +210,7 @@ namespace RurouniJones.SimpleAirDefense.Core
                 {
                     _logger.LogWarning(ex, "Airspace monitoring failure");
                 }
+                await Task.Delay(10000, defenderToken);
             }
         }
     }

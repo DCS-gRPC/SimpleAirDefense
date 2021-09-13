@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
@@ -15,6 +14,8 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 {
     public class RpcClient : IRpcClient
     {
+        private static ConcurrentDictionary<string, UnitDescriptor> _descriptorCache = new();
+
         public ConcurrentQueue<Shared.Models.Unit> UpdateQueue { get; set; }
 
         public string HostName { get; set; }
@@ -105,6 +106,14 @@ namespace RurouniJones.SimpleAirDefense.Grpc
             // one doesn't then we get the descriptor for this named unit and then cache the
             // response based on the TypeName
             _logger.LogInformation("{name} ({type}) Retrieving Descriptor", name, type);
+
+            if (_descriptorCache.ContainsKey(type))
+            {
+                _logger.LogInformation("{name} ({type}) Descriptor Cache hit", name, type);
+                return _descriptorCache[type];
+            }
+            _logger.LogInformation("{name} ({type}) Descriptor Cache miss", name, type);
+
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
             var client = new Units.UnitsClient(channel);
 
@@ -117,10 +126,13 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 
                 _logger.LogInformation("{name} ({type}) Retrieved Descriptor", name, type);
 
-                return new UnitDescriptor
+                var unitDescriptor = new UnitDescriptor
                 {
                     Attributes = descriptor.Attributes.ToList()
                 };
+
+                _descriptorCache[type] = unitDescriptor;
+                return unitDescriptor;
             }
             catch (Exception ex)
             {
