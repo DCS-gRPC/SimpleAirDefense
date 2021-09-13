@@ -1,54 +1,31 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
+using RurouniJones.SimpleAirDefense.Grpc.Cache;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using RurouniJones.SimpleAirDefense.Shared.Models;
-using YamlDotNet.Serialization;
 
 namespace RurouniJones.SimpleAirDefense.Grpc
 {
     public class RpcClient : IRpcClient
     {
-        private static readonly ConcurrentDictionary<string, UnitDescriptor> DescriptorCache = new();
-        private const string DescriptorCacheDirectory = "Cache/Descriptors/";
-        
         public ConcurrentQueue<Shared.Models.Unit> UpdateQueue { get; set; }
 
         public string HostName { get; set; }
         public int Port { get; set; }
 
         private readonly ILogger<RpcClient> _logger;
+        private readonly UnitDescriptorCache _descriptorCache;
 
-        private void PopulateDescriptorCache()
-        {
-            try
-            {
-                Directory.CreateDirectory(DescriptorCacheDirectory);
-
-                var deserializer = new DeserializerBuilder()
-                    .Build();
-
-                foreach (var file in Directory.EnumerateFiles(DescriptorCacheDirectory, "*.yaml"))
-                {
-                    DescriptorCache[Path.GetFileNameWithoutExtension(file)] =
-                        deserializer.Deserialize<UnitDescriptor>(File.ReadAllText(file));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "Error building descriptor cache");
-            }
-        }
-
-        public RpcClient(ILogger<RpcClient> logger)
+        public RpcClient(ILogger<RpcClient> logger, UnitDescriptorCache descriptorCache)
         {
             _logger = logger;
+            _descriptorCache = descriptorCache;
         }
 
         public async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -123,19 +100,16 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 
         public async Task<UnitDescriptor> GetUnitDescriptorAsync(string name, string type)
         {
-            if (DescriptorCache.IsEmpty)
+            _logger.LogDebug("{name} ({type}) Retrieving Descriptor", name, type);
+
+            var cachedDescriptor = _descriptorCache.GetDescriptor(type);
+            if (cachedDescriptor != null)
             {
-                PopulateDescriptorCache();
+                _logger.LogDebug("{name} ({type}) Descriptor Cache hit", name, type);
+                return cachedDescriptor;
             }
 
-            _logger.LogInformation("{name} ({type}) Retrieving Descriptor", name, type);
-
-            if (DescriptorCache.ContainsKey(type))
-            {
-                _logger.LogInformation("{name} ({type}) Descriptor Cache hit", name, type);
-                return DescriptorCache[type];
-            }
-            _logger.LogInformation("{name} ({type}) Descriptor Cache miss", name, type);
+            _logger.LogDebug("{name} ({type}) Descriptor Cache miss", name, type);
 
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
             var client = new Units.UnitsClient(channel);
@@ -147,19 +121,12 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                     Name = name
                 }).ResponseAsync;
 
-                _logger.LogInformation("{name} ({type}) Retrieved Descriptor", name, type);
-
                 var unitDescriptor = new UnitDescriptor
                 {
                     Attributes = descriptor.Attributes.ToList()
                 };
 
-                var serializer = new SerializerBuilder().Build();
-                var yaml = serializer.Serialize(unitDescriptor);
-
-                await File.WriteAllTextAsync($"{DescriptorCacheDirectory}/{type}.yaml", yaml);
-
-                DescriptorCache[type] = unitDescriptor;
+                await _descriptorCache.AddDescriptorToCacheAsync(type, unitDescriptor);
                 return unitDescriptor;
             }
             catch (Exception ex)

@@ -128,17 +128,18 @@ namespace RurouniJones.SimpleAirDefense.Core
 
         private async Task MonitorAirspace(CancellationToken defenderToken)
         {
-            _logger.LogInformation("Airspace monitoring started");
+            _logger.LogDebug("Airspace monitoring started");
             while (!defenderToken.IsCancellationRequested)
             {
                 try
                 {
-                    _logger.LogInformation("Entering Monitoring Loop");
+                    _logger.LogDebug("Entering Monitoring Loop");
 
                     // Skip if there are no units
                     if (_units.Values.Count == 0)
                     {
                         _logger.LogInformation("No Units found. Skipping");
+                        await Task.Delay(5000, defenderToken);
                         continue;
                     }
 
@@ -151,16 +152,16 @@ namespace RurouniJones.SimpleAirDefense.Core
                         _logger.LogInformation("No EWRs found. Turning on all SAM sites");
                         foreach (var samSite in _units.Values.Where(u => u.Attributes.Contains("SAM TR")))
                         {
-                            _logger.LogInformation("{unitName}, {groupName}: Turning on radar", samSite.Name, samSite.GroupName);
+                            _logger.LogDebug("{unitName}, {groupName}: Turning on radar", samSite.Name, samSite.GroupName);
                             samSite.AlarmState = 2;
                         }
                     }
                     else
                     {
-                        _logger.LogInformation("EWR sites found");
+                        _logger.LogDebug("EWR sites found");
                         foreach (var samSite in _units.Values.Where(u => u.Attributes.Contains("SAM TR")))
                         {
-                            _logger.LogInformation("{unitName}, {groupName}: Checking if targets in activation range", samSite.Name, samSite.GroupName);
+                            _logger.LogDebug("{unitName}, {groupName}: Checking if targets in activation range", samSite.Name, samSite.GroupName);
 
                             var samSitePosition =
                                 new Geo.Coordinate(samSite.Position.Latitude, samSite.Position.Longitude);
@@ -178,21 +179,21 @@ namespace RurouniJones.SimpleAirDefense.Core
                              */
                             if (targetsInRange)
                             {
-                                _logger.LogInformation("{unitName}, {groupName}: Targets in activation range", samSite.Name, samSite.GroupName);
-                                _logger.LogInformation("{unitName}, {groupName}: Setting Alarm State to {alarmState}", samSite.Name, samSite.GroupName, 2);
+                                _logger.LogDebug("{unitName}, {groupName}: Targets in activation range", samSite.Name, samSite.GroupName);
+                                _logger.LogDebug("{unitName}, {groupName}: Setting Alarm State to {alarmState}", samSite.Name, samSite.GroupName, 2);
                                 alarmStates[samSite.GroupName] = 2;
 
                             }
                             else
                             {
-                                _logger.LogInformation("{unitName}, {groupName}: No targets in activation range", samSite.Name, samSite.GroupName);
+                                _logger.LogDebug("{unitName}, {groupName}: No targets in activation range", samSite.Name, samSite.GroupName);
                                 if (alarmStates.ContainsKey(samSite.GroupName))
                                 {
-                                    _logger.LogInformation("{unitName}, {groupName}: Existing Alarm state set, skipping", samSite.Name, samSite.GroupName);
+                                    _logger.LogDebug("{unitName}, {groupName}: Existing Alarm state set, skipping", samSite.Name, samSite.GroupName);
                                 }
                                 else
                                 {
-                                    _logger.LogInformation("{unitName}, {groupName}: Turning alarm state to {alarmState}", samSite.Name, samSite.GroupName, 1);
+                                    _logger.LogDebug("{unitName}, {groupName}: Turning alarm state to {alarmState}", samSite.Name, samSite.GroupName, 1);
                                     alarmStates[samSite.GroupName] = 1;
                                 }
                             }

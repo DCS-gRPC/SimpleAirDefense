@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RurouniJones.SimpleAirDefense.Core;
 using RurouniJones.SimpleAirDefense.Grpc;
+using RurouniJones.SimpleAirDefense.Grpc.Cache;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using Serilog;
 
@@ -50,6 +51,7 @@ namespace RurouniJones.SimpleAirDefense
                 {
                     services.AddHostedService<Worker>();
                     services.AddSingleton<DefenderFactory>();
+                    services.AddSingleton<UnitDescriptorCache>();
                     services.AddTransient<Defender>();
                     services.AddTransient<IRpcClient, RpcClient>();
                     services.Configure<Configuration>(config);
