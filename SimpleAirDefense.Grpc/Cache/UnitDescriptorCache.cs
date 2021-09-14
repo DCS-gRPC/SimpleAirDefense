@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc.Cache
 
         public UnitDescriptor GetDescriptor(string name)
         {
-            return _descriptorCache[name];
+            return _descriptorCache.ContainsKey(name) ? _descriptorCache[name] : null;
         }
 
         public async Task AddDescriptorToCacheAsync(string type, UnitDescriptor descriptor)

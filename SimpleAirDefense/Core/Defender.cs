@@ -168,8 +168,9 @@ namespace RurouniJones.SimpleAirDefense.Core
                             var targetsInRange = _units.Values.Any(u =>
                             {
                                 var unitPosition = new Geo.Coordinate(u.Position.Latitude, u.Position.Longitude);
-                                return u.Coalition != samSite.Coalition &&
-                                       samSitePosition.CalculateGreatCircleLine(unitPosition).Distance.SiValue <
+                                return u.Coalition != samSite.Coalition
+                                       && u.Symbology.SymbolSet == MilStd2525d.Enums.SymbolSet.Air
+                                       && samSitePosition.CalculateGreatCircleLine(unitPosition).Distance.SiValue <
                                        _samRanges[samSite.Type];
                             });
 
@@ -182,7 +183,6 @@ namespace RurouniJones.SimpleAirDefense.Core
                                 _logger.LogDebug("{unitName}, {groupName}: Targets in activation range", samSite.Name, samSite.GroupName);
                                 _logger.LogDebug("{unitName}, {groupName}: Setting Alarm State to {alarmState}", samSite.Name, samSite.GroupName, 2);
                                 alarmStates[samSite.GroupName] = 2;
-
                             }
                             else
                             {

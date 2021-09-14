@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using RurouniJones.SimpleAirDefense.Grpc.Cache;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using RurouniJones.SimpleAirDefense.Shared.Models;
+using SimpleAirDefense.Encyclopedia;
 
 namespace RurouniJones.SimpleAirDefense.Grpc
 {
@@ -61,7 +62,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                                 GroupName = sourceUnit.GroupName,
                                 Speed = sourceUnit.Speed,
                                 Heading = sourceUnit.Heading,
-                                Symbology = null
+                                Symbology = new MilStd2525d((int) sourceUnit.Coalition, Repository.GetUnitEntryByDcsCode(sourceUnit.Type)?.MilStd2525D)
                             });
                             _logger.LogDebug("Enqueue unit update {unit}", sourceUnit);
                             break;

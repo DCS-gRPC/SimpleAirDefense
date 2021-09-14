@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SimpleAirDefense.Encyclopedia\SimpleAirDefense.Encyclopedia.csproj" />
     <ProjectReference Include="..\SimpleAirDefense.Shared\SimpleAirDefense.Shared.csproj" />
   </ItemGroup>
 

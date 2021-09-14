@@ -24,7 +24,7 @@ namespace RurouniJones.SimpleAirDefense.Shared.Models
         public double Heading { get; init; }
         public double Speed { get; init; }
         public bool Deleted { get; init; }
-        public ISymbology Symbology { get; init; }
+        public MilStd2525d Symbology { get; init; }
 
         private List<string> _attributes;
         public List<string> Attributes

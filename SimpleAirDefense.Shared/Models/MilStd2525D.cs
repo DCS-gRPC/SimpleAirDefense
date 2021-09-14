@@ -4,7 +4,7 @@ using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 
 namespace RurouniJones.SimpleAirDefense.Shared.Models
 {
-    public class MilStd2525d : ISymbology
+    public class MilStd2525d
     {
         public class Enums
         {
