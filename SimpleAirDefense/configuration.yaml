@@ -1,8 +1,7 @@
 ﻿---
 # The following setup is for the logging system. For information on how to change this
-# see 
+# see https://serilog.net/
 Serilog:
-  Using:
   MinimumLevel: 
     Default: Information
   Override: 
@@ -25,5 +24,14 @@ GameServers:
     ShortName: RBS
     Rpc:
       Host: rbs.example.com
+      # This is the default port
+      Port: 50051
+  # If you don't need extra servers you can delete this line and everything below it
+  -
+    Name: RurouniJones Worstest Server
+    # Used in discord commands so keep this unique across your gameservers
+    ShortName: RWS
+    Rpc:
+      Host: rws.example.com
       # This is the default port
       Port: 50051
