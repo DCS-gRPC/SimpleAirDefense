@@ -33,6 +33,13 @@ namespace RurouniJones.SimpleAirDefense.Core
             { "ZSU-23-4 Shilka", 1000 }
         };
 
+        private enum AlarmState
+        {
+            Auto = 0,
+            Green = 1,
+            Red = 2
+        }
+
         /*
          * Configuration for the GameServer including DB and RPC information
          */
@@ -59,7 +66,7 @@ namespace RurouniJones.SimpleAirDefense.Core
             _rpcClient.HostName = GameServer.Rpc.Host;
             _rpcClient.Port = GameServer.Rpc.Port;
 
-            _logger.LogInformation("{server} Defender Processing starting", GameServer.ShortName);
+            _logger.LogInformation("[{server}] Defender Processing starting", GameServer.ShortName);
             while (!stoppingToken.IsCancellationRequested)
             {
                 var defenderTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
@@ -83,7 +90,7 @@ namespace RurouniJones.SimpleAirDefense.Core
                 };
                 await Task.WhenAny(tasks); // If one task finishes (usually when the RPC client gets
                                            // disconnected on mission restart
-                _logger.LogInformation("{server} Defender Processing stopping", GameServer.ShortName);
+                _logger.LogInformation("[{server}] Defender Processing stopping", GameServer.ShortName);
                 defenderTokenSource.Cancel(); // Then cancel all of the other tasks
                 // Then we wait for all of them to finish before starting the loop again.
                 try
@@ -95,11 +102,11 @@ namespace RurouniJones.SimpleAirDefense.Core
                     // No-op. Exceptions have already been logged in the task
                 }
 
-                _logger.LogInformation("{server} Defender Processing stopped", GameServer.ShortName);
+                _logger.LogInformation("[{server}] Defender Processing stopped", GameServer.ShortName);
 
                 // Wait before trying again unless the entire service is shutting down.
                 await Task.Delay((int)TimeSpan.FromSeconds(10).TotalMilliseconds, stoppingToken);
-                _logger.LogInformation("{server} Defender Processing restarting", GameServer.ShortName);
+                _logger.LogInformation("[{server}] Defender Processing restarting", GameServer.ShortName);
             }
         }
 
@@ -128,17 +135,17 @@ namespace RurouniJones.SimpleAirDefense.Core
 
         private async Task MonitorAirspace(CancellationToken defenderToken)
         {
-            _logger.LogDebug("Airspace monitoring started");
+            _logger.LogDebug("[{server}] Airspace monitoring started", GameServer.ShortName);
             while (!defenderToken.IsCancellationRequested)
             {
                 try
                 {
-                    _logger.LogDebug("Entering Monitoring Loop");
+                    _logger.LogDebug("[{server}] Entering Monitoring Loop", GameServer.ShortName);
 
                     // Skip if there are no units
                     if (_units.Values.Count == 0)
                     {
-                        _logger.LogInformation("No Units found. Skipping");
+                        _logger.LogInformation("[{server}] No Units found. Skipping", GameServer.ShortName);
                         await Task.Delay(5000, defenderToken);
                         continue;
                     }
@@ -149,23 +156,25 @@ namespace RurouniJones.SimpleAirDefense.Core
 
                     if (!ewrsPresent)
                     {
-                        _logger.LogInformation("No EWRs found. Turning on all SAM sites");
+                        _logger.LogInformation("[{server}] No EWRs found. Turning on all SAM sites", GameServer.ShortName);
                         foreach (var samSite in _units.Values.Where(u => u.Attributes.Contains("SAM TR")))
                         {
-                            _logger.LogDebug("{unitName}, {groupName}: Turning on radar", samSite.Name, samSite.GroupName);
-                            samSite.AlarmState = 2;
+                            _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: Turning on radar",
+                                GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName);
+                            samSite.AlarmState = (int) AlarmState.Red;
                         }
                     }
                     else
                     {
-                        _logger.LogDebug("EWR sites found");
+                        _logger.LogDebug("[{server}] EWR sites found", GameServer.ShortName);
                         foreach (var samSite in _units.Values.Where(u => u.Attributes.Contains("SAM TR")))
                         {
-                            _logger.LogDebug("{unitName}, {groupName}: Checking if targets in activation range", samSite.Name, samSite.GroupName);
+                            _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: Checking if targets in activation range",
+                                GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName);
 
                             var samSitePosition =
                                 new Geo.Coordinate(samSite.Position.Latitude, samSite.Position.Longitude);
-                            var targetsInRange = _units.Values.Any(u =>
+                            var targetsInRange = _units.Values.Count(u =>
                             {
                                 var unitPosition = new Geo.Coordinate(u.Position.Latitude, u.Position.Longitude);
                                 return u.Coalition != samSite.Coalition
@@ -178,22 +187,27 @@ namespace RurouniJones.SimpleAirDefense.Core
                              * We should always be able to enable a SamSite because there might be a longer ranged radar in it. But we shouldn't shut down a sam site
                              * because one of the Radars is shorter range (i.e. shut down an SA-6 site because it has a Short Range Shilka in it)
                              */
-                            if (targetsInRange)
+                            if (targetsInRange > 0)
                             {
-                                _logger.LogDebug("{unitName}, {groupName}: Targets in activation range", samSite.Name, samSite.GroupName);
-                                _logger.LogDebug("{unitName}, {groupName}: Setting Alarm State to {alarmState}", samSite.Name, samSite.GroupName, 2);
+                                _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: {count} targets in activation range",
+                                    GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName, targetsInRange);
+                                _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: Setting Alarm State to {alarmState}",
+                                    GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName, AlarmState.Red);
                                 alarmStates[samSite.GroupName] = 2;
                             }
                             else
                             {
-                                _logger.LogDebug("{unitName}, {groupName}: No targets in activation range", samSite.Name, samSite.GroupName);
+                                _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: No targets in activation range",
+                                    GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName);
                                 if (alarmStates.ContainsKey(samSite.GroupName))
                                 {
-                                    _logger.LogDebug("{unitName}, {groupName}: Existing Alarm state set, skipping", samSite.Name, samSite.GroupName);
+                                    _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: Existing Alarm state set, skipping",
+                                        GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName);
                                 }
                                 else
                                 {
-                                    _logger.LogDebug("{unitName}, {groupName}: Turning alarm state to {alarmState}", samSite.Name, samSite.GroupName, 1);
+                                    _logger.LogDebug("[{server}] {unitName} ({unitType}), {groupName}: Turning alarm state to {alarmState}",
+                                        GameServer.ShortName, samSite.Name, samSite.Type, samSite.GroupName, AlarmState.Green);
                                     alarmStates[samSite.GroupName] = 1;
                                 }
                             }
@@ -202,14 +216,15 @@ namespace RurouniJones.SimpleAirDefense.Core
                         foreach (var (groupName, alarmState) in alarmStates)
                         {
                             var unit = _units.Values.First(u => u.GroupName == groupName);
-                            _logger.LogInformation("{groupName}: Setting entire site alarm State to {alarmState}", unit.GroupName, alarmState);
+                            _logger.LogInformation("[{server}] {groupName}: Setting entire site alarm State to {alarmState}",
+                                GameServer.ShortName, unit.GroupName, (AlarmState) alarmState);
                             unit.AlarmState = alarmState;
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Airspace monitoring failure");
+                    _logger.LogWarning(ex, "[{server}] Airspace monitoring failure", GameServer.ShortName);
                 }
                 await Task.Delay(10000, defenderToken);
             }

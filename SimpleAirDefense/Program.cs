@@ -25,6 +25,8 @@ namespace RurouniJones.SimpleAirDefense
                 .AddYamlFile("configuration.Development.yaml", true, true)
                 .Build();
 
+            Console.Title = "Simple Air Defense";
+
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();

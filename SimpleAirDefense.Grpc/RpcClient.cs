@@ -64,7 +64,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                                 Heading = sourceUnit.Heading,
                                 Symbology = new MilStd2525d((int) sourceUnit.Coalition, Repository.GetUnitEntryByDcsCode(sourceUnit.Type)?.MilStd2525D)
                             });
-                            _logger.LogDebug("Enqueue unit update {unit}", sourceUnit);
+                            _logger.LogTrace("Enqueue unit update {unit}", sourceUnit);
                             break;
                         case UnitUpdate.UpdateOneofCase.Gone:
                             var deletedUnit = update.Gone;
@@ -74,7 +74,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                                 Name = deletedUnit.Name,
                                 Deleted = true
                             });
-                            _logger.LogDebug("Enqueue unit deletion {unit}", deletedUnit);
+                            _logger.LogTrace("Enqueue unit deletion {unit}", deletedUnit);
                             break;
                         default:
                             _logger.LogWarning("Unexpected UnitUpdate case of {case}", update.UpdateCase);
@@ -101,16 +101,16 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 
         public async Task<UnitDescriptor> GetUnitDescriptorAsync(string name, string type)
         {
-            _logger.LogDebug("{name} ({type}) Retrieving Descriptor", name, type);
+            _logger.LogTrace("{name} ({type}) Retrieving Descriptor", name, type);
 
             var cachedDescriptor = _descriptorCache.GetDescriptor(type);
             if (cachedDescriptor != null)
             {
-                _logger.LogDebug("{name} ({type}) Descriptor Cache hit", name, type);
+                _logger.LogTrace("{name} ({type}) Descriptor Cache hit", name, type);
                 return cachedDescriptor;
             }
 
-            _logger.LogDebug("{name} ({type}) Descriptor Cache miss", name, type);
+            _logger.LogTrace("{name} ({type}) Descriptor Cache miss", name, type);
 
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
             var client = new Units.UnitsClient(channel);
