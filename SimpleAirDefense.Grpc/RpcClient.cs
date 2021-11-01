@@ -7,6 +7,9 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 using RurouniJones.SimpleAirDefense.Grpc.Cache;
+using RurouniJones.SimpleAirDefense.Grpc.Dcs.Controller;
+using RurouniJones.SimpleAirDefense.Grpc.Dcs.Mission;
+using RurouniJones.SimpleAirDefense.Grpc.Dcs.Unit;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using RurouniJones.SimpleAirDefense.Shared.Models;
 using SimpleAirDefense.Encyclopedia;
@@ -15,7 +18,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
 {
     public class RpcClient : IRpcClient
     {
-        public ConcurrentQueue<Shared.Models.Unit> UpdateQueue { get; set; }
+        public ConcurrentQueue<Unit> UpdateQueue { get; set; }
 
         public string HostName { get; set; }
         public int Port { get; set; }
@@ -32,7 +35,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
         public async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
-            var client = new Mission.MissionClient(channel);
+            var client = new MissionService.MissionServiceClient(channel);
             try
             {
                 var units = client.StreamUnits(new StreamUnitsRequest
@@ -44,17 +47,17 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                 {
                     switch (update.UpdateCase)
                     {
-                        case UnitUpdate.UpdateOneofCase.None:
+                        case StreamUnitsResponse.UpdateOneofCase.None:
                             //No-op
                             break;
-                        case UnitUpdate.UpdateOneofCase.Unit:
+                        case StreamUnitsResponse.UpdateOneofCase.Unit:
                             var sourceUnit = update.Unit;
-                            UpdateQueue.Enqueue(new Shared.Models.Unit(this)
+                            UpdateQueue.Enqueue(new Unit(this)
                             {
                                 Coalition = (int)sourceUnit.Coalition,
                                 Id = sourceUnit.Id,
                                 Name = sourceUnit.Name,
-                                Position = new Shared.Models.Position(sourceUnit.Position.Lat, sourceUnit.Position.Lon),
+                                Position = new Position(sourceUnit.Position.Lat, sourceUnit.Position.Lon),
                                 Altitude = sourceUnit.Position.Alt,
                                 Callsign = sourceUnit.Callsign,
                                 Type = sourceUnit.Type,
@@ -66,9 +69,9 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                             });
                             _logger.LogTrace("Enqueue unit update {unit}", sourceUnit);
                             break;
-                        case UnitUpdate.UpdateOneofCase.Gone:
+                        case StreamUnitsResponse.UpdateOneofCase.Gone:
                             var deletedUnit = update.Gone;
-                            UpdateQueue.Enqueue(new Shared.Models.Unit(null)
+                            UpdateQueue.Enqueue(new Unit(null)
                             {
                                 Id = deletedUnit.Id,
                                 Name = deletedUnit.Name,
@@ -113,11 +116,11 @@ namespace RurouniJones.SimpleAirDefense.Grpc
             _logger.LogTrace("{name} ({type}) Descriptor Cache miss", name, type);
 
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
-            var client = new Units.UnitsClient(channel);
+            var client = new UnitService.UnitServiceClient(channel);
 
             try
             {
-                var descriptor = await client.GetUnitDescriptorAsync(new GetUnitDescriptorRequest()
+                var descriptor = await client.GetDescriptorAsync(new GetDescriptorRequest()
                 {
                     Name = name
                 }).ResponseAsync;
@@ -140,7 +143,7 @@ namespace RurouniJones.SimpleAirDefense.Grpc
         public async Task SetAlarmStateAsync(string unitName, string groupName, int alarmState)
         {
             using var channel = GrpcChannel.ForAddress($"http://{HostName}:{Port}");
-            var client = new Controllers.ControllersClient(channel);
+            var client = new ControllerService.ControllerServiceClient(channel);
 
             try
             {
