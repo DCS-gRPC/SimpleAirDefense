@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
+using RurouniJones.Dcs.Grpc.V0.Controller;
+using RurouniJones.Dcs.Grpc.V0.Mission;
+using RurouniJones.Dcs.Grpc.V0.Unit;
 using RurouniJones.SimpleAirDefense.Grpc.Cache;
-using RurouniJones.SimpleAirDefense.Grpc.Dcs.Controller;
-using RurouniJones.SimpleAirDefense.Grpc.Dcs.Mission;
-using RurouniJones.SimpleAirDefense.Grpc.Dcs.Unit;
 using RurouniJones.SimpleAirDefense.Shared.Interfaces;
 using RurouniJones.SimpleAirDefense.Shared.Models;
 using SimpleAirDefense.Encyclopedia;
@@ -62,9 +62,9 @@ namespace RurouniJones.SimpleAirDefense.Grpc
                                 Callsign = sourceUnit.Callsign,
                                 Type = sourceUnit.Type,
                                 Player = sourceUnit.PlayerName,
-                                GroupName = sourceUnit.GroupName,
-                                Speed = sourceUnit.Speed,
-                                Heading = sourceUnit.Heading,
+                                GroupName = sourceUnit.Group.Name,
+                                Speed = sourceUnit.Velocity.Speed,
+                                Heading = sourceUnit.Velocity.Heading,
                                 Symbology = new MilStd2525d((int) sourceUnit.Coalition, Repository.GetUnitEntryByDcsCode(sourceUnit.Type)?.MilStd2525D)
                             });
                             _logger.LogTrace("Enqueue unit update {unit}", sourceUnit);

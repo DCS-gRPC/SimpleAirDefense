@@ -6,16 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.19.1" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.40.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.41.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="YamlDotNet" Version="11.2.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\LICENSE.md" Link="LICENSE.md">
       <PackagePath></PackagePath>
       <Pack>True</Pack>
@@ -23,16 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\dcs\**\*.proto" ProtoRoot="Protos" />
+    <PackageReference Include="RurouniJones.Dcs.Grpc" Version="0.7.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SimpleAirDefense.Encyclopedia\SimpleAirDefense.Encyclopedia.csproj" />
     <ProjectReference Include="..\SimpleAirDefense.Shared\SimpleAirDefense.Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Protos\" />
   </ItemGroup>
 
 </Project>
